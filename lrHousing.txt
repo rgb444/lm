@@ -1,0 +1,127 @@
+# === Import Required Libraries ===
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+from sklearn.linear_model import LinearRegression
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
+
+# === Load Dataset ===
+df = pd.read_csv('Housing.csv')
+
+# === Encoding Categorical Features ===
+# Identify categorical columns to encode (columns with 'yes'/'no', etc.)
+categorical_columns = ['mainroad', 'guestroom', 'basement', 'hotwaterheating', 'airconditioning', 'prefarea', 'furnishingstatus']
+
+# Apply One-Hot Encoding to these categorical features
+df_encoded = pd.get_dummies(df, columns=categorical_columns, drop_first=True)
+
+# === Exploratory Data Analysis (EDA) ===
+
+# 1. Dataset Overview
+print("Dataset Overview:")
+print(df_encoded.head())  # Display the first 5 rows
+
+# 2. Basic Summary Statistics
+print("\nSummary Statistics:")
+print(df_encoded.describe())  # Summary statistics for numerical columns
+
+# 3. Check for Missing Values
+print("\nMissing Values:")
+print(df_encoded.isna().sum())  # Check for missing values
+
+# 4. Check Data Types of Columns
+print("\nData Types:")
+print(df_encoded.dtypes)  # Check the data types of all columns
+
+# 5. Visualizing the Distribution of Features (Numerical)
+# Plot histograms for numerical columns
+df_encoded.hist(bins=20, figsize=(15, 10), grid=False)
+plt.suptitle('Distribution of Numerical Features')
+plt.show()
+
+# 6. Visualizing the Correlation Matrix (after encoding)
+plt.figure(figsize=(10, 8))
+sns.heatmap(df_encoded.corr(), annot=True, cmap='coolwarm', fmt='.2f')
+plt.title('Correlation Matrix')
+plt.show()
+
+# 7. Visualizing Relationships Between Features
+# Scatter plot between area and price
+plt.figure(figsize=(8, 6))
+sns.scatterplot(x='area', y='price', data=df_encoded, color='blue')
+plt.title('Price vs Area')
+plt.xlabel('Area')
+plt.ylabel('Price')
+plt.show()
+
+# === Feature Selection ===
+# We will select 'area' as the feature (X) and 'price' as the target (y)
+X = df_encoded[['area']]  # Independent variable: 'area'
+y = df_encoded['price']   # Dependent variable: 'price'
+
+# === Train-Test Split ===
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=0)
+
+# === Linear Regression Model ===
+# Create a Linear Regression model and fit it to the training data
+regressor = LinearRegression()
+regressor.fit(X_train, y_train)
+
+# === Model Predictions ===
+# Make predictions on the test set
+y_pred = regressor.predict(X_test)
+
+# === Model Evaluation ===
+# 1. Calculate the R-squared score (coefficient of determination)
+r2 = r2_score(y_test, y_pred)
+print(f"\nR-squared (R²) Score: {r2}")
+
+# 2. Calculate Mean Absolute Error (MAE)
+mae = mean_absolute_error(y_test, y_pred)
+print(f"Mean Absolute Error (MAE): {mae}")
+
+# 3. Calculate Mean Squared Error (MSE)
+mse = mean_squared_error(y_test, y_pred)
+print(f"Mean Squared Error (MSE): {mse}")
+
+# 4. Calculate Root Mean Squared Error (RMSE)
+rmse = np.sqrt(mse)
+print(f"Root Mean Squared Error (RMSE): {rmse}")
+
+# === Visualizing the Results ===
+# Plotting the regression line (for train set)
+plt.figure(figsize=(8, 6))
+plt.scatter(X_train, y_train, color='red', label='Train data')
+plt.plot(X_train, regressor.predict(X_train), color='blue', label='Regression line')
+plt.title('Train Set: Price vs Area with Regression Line')
+plt.xlabel('Area')
+plt.ylabel('Price')
+plt.legend()
+plt.show()
+
+# Plotting the predictions on the test set
+plt.figure(figsize=(8, 6))
+plt.scatter(X_test, y_test, color='green', label='Test data')
+plt.plot(X_train, regressor.predict(X_train), color='blue', label='Regression line')
+plt.title('Test Set: Price vs Area with Regression Line')
+plt.xlabel('Area')
+plt.ylabel('Price')
+plt.legend()
+plt.show()
+
+# === Model Coefficients ===
+# Display the model intercept and coefficients
+intercept = regressor.intercept_
+coef = regressor.coef_[0]
+
+print(f"\nModel Intercept: {intercept}")
+print(f"Model Coefficient for 'area': {coef}")
+
+# === Conclusion ===
+# This section will summarize the performance of the model and the insights we gained from the regression.
+print("\nConclusion:")
+print(f"The model has an R² score of {r2}, indicating that it explains about {r2 * 100}% of the variance in the house prices based on the area.")
+print(f"The mean absolute error (MAE) is {mae}, meaning that on average, the model's predictions deviate from the actual prices by this amount.")
+print(f"The RMSE value is {rmse}, indicating the model's prediction accuracy in relation to the scale of the price.")
