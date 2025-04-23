@@ -1,0 +1,135 @@
+# === Install mlxtend if needed ===
+# !pip install mlxtend
+
+# === Import Required Libraries ===
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+from mlxtend.preprocessing import TransactionEncoder
+from mlxtend.frequent_patterns import apriori, association_rules
+import warnings
+warnings.filterwarnings('ignore')
+
+# === Load Dataset ===
+df = pd.read_csv('groceries.csv')
+
+# === Exploratory Data Analysis (EDA) ===
+# Preview the first five rows of the dataset
+print("First five rows:")
+print(df.head())
+
+# Dataset summary (includes number of non-null entries and data types)
+print("\nDataset Info:")
+print(df.info())
+
+# Check for missing values in the dataset
+print("\nMissing Values:")
+print(df.isnull().sum())
+
+# Check unique values for customer numbers and items
+print("\nUnique customers:", df['Member_number'].nunique())
+print("Unique items:", df['itemDescription'].nunique())
+
+# Top 10 most frequent items in the dataset
+print("\nTop 10 Most Frequent Items:")
+print(df['itemDescription'].value_counts().head(10))
+
+# === Data Visualization ===
+# Visualizing the top 10 most frequent items purchased by customers
+plt.figure(figsize=(10, 6))
+df['itemDescription'].value_counts().head(10).plot(kind='bar', color='skyblue')
+plt.title('Top 10 Most Purchased Items')
+plt.xlabel('Item Description')
+plt.ylabel('Frequency')
+plt.xticks(rotation=45)
+plt.tight_layout()
+plt.show()
+
+# === Distribution of Item Frequencies ===
+# Visualizing the distribution of item frequencies (log scale)
+plt.figure(figsize=(10, 6))
+df['itemDescription'].value_counts().plot(kind='hist', bins=50, color='skyblue', log=True)
+plt.title('Item Frequency Distribution (Log Scale)')
+plt.xlabel('Frequency')
+plt.ylabel('Log Frequency')
+plt.tight_layout()
+plt.show()
+
+# === Data Analysis by Customer ===
+# Number of unique items bought per customer
+items_per_customer = df.groupby('Member_number')['itemDescription'].nunique()
+plt.figure(figsize=(10, 6))
+items_per_customer.plot(kind='hist', bins=50, color='lightgreen')
+plt.title('Distribution of Unique Items Purchased by Each Customer')
+plt.xlabel('Number of Unique Items')
+plt.ylabel('Frequency')
+plt.tight_layout()
+plt.show()
+
+# === Transaction Length (Items per Transaction) ===
+# Visualizing the distribution of the number of items per transaction
+items_per_transaction = df.groupby('Member_number')['itemDescription'].count()
+plt.figure(figsize=(10, 6))
+items_per_transaction.plot(kind='hist', bins=50, color='lightcoral')
+plt.title('Distribution of Items per Transaction')
+plt.xlabel('Number of Items')
+plt.ylabel('Frequency')
+plt.tight_layout()
+plt.show()
+
+# === Data Preparation for Apriori ===
+# Group items by customer to create transactions for frequent itemset mining
+transactions = df.groupby('Member_number')['itemDescription'].apply(list).tolist()
+
+# === Encoding ===
+# Use Transaction Encoder to encode transactions as a matrix of boolean values
+te = TransactionEncoder()
+te_ary = te.fit(transactions).transform(transactions)
+df_encoded = pd.DataFrame(te_ary, columns=te.columns_)
+
+# === Frequent Itemset Mining (Apriori Algorithm) ===
+# Apply the Apriori algorithm to find frequent itemsets with minimum support of 0.1
+frequent_itemsets = apriori(df_encoded, min_support=0.1, use_colnames=True)
+print("\nFrequent Itemsets (Support ≥ 0.1):")
+print(frequent_itemsets)
+
+# === Association Rule Generation ===
+# Generate association rules with confidence >= 0.4
+rules = association_rules(frequent_itemsets, metric="confidence", min_threshold=0.4)
+
+# Filter for strong rules with confidence >= 0.5
+strong_rules = rules[rules['confidence'] >= 0.5]
+print("\nStrong Association Rules (Confidence ≥ 0.5):")
+print(strong_rules[['antecedents', 'consequents', 'support', 'confidence', 'lift']])
+
+# === Rules Sorted by Lift ===
+# Sort the rules by lift (higher lift means stronger association)
+sorted_rules = rules.sort_values(by="lift", ascending=False)
+print("\nTop Rules Sorted by Lift:")
+print(sorted_rules[['antecedents', 'consequents', 'support', 'confidence', 'lift']].head())
+
+# === Visualizations for Association Rules ===
+# Scatter plot of Support vs Confidence
+plt.figure(figsize=(8, 6))
+plt.scatter(rules['support'], rules['confidence'], alpha=0.7, c='blue')
+plt.title('Support vs Confidence')
+plt.xlabel('Support')
+plt.ylabel('Confidence')
+plt.grid(True)
+plt.show()
+
+# Scatter plot of Support vs Lift
+plt.figure(figsize=(8, 6))
+plt.scatter(rules['support'], rules['lift'], alpha=0.7, c='green')
+plt.title('Support vs Lift')
+plt.xlabel('Support')
+plt.ylabel('Lift')
+plt.grid(True)
+plt.show()
+
+# === Additional Insights ===
+# Plotting Heatmap of Support, Confidence, and Lift for better insights into associations
+plt.figure(figsize=(10, 8))
+sns.heatmap(rules[['support', 'confidence', 'lift']].corr(), annot=True, cmap='coolwarm', fmt='.2f')
+plt.title('Correlation Heatmap of Support, Confidence, and Lift')
+plt.show()
